@@ -1,0 +1,14 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: sirepo
+# Required-Start: rabbitmq celery-sirepo
+# Required-Stop: rabbitmq celery-sirepo
+# Default-Start: 2 3 4 5
+# Default-Stop:  0 1 6
+# Short-Description: Enable sirepo
+### END INIT INFO
+
+bivio_service_name=sirepo
+
+. /etc/init.d/bivio-service.functions

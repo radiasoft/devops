@@ -1,0 +1,12 @@
+#!/bin/bash
+# Shares the same image as sirepo service
+. "$(dirname "${BASH_SOURCE[0]}")"/sirepo
+
+bivio_service_set_vars() {
+    sirepo_common_vars
+    bivio_service_exec_cmd=( celery worker -A sirepo.celery_tasks -l info -f celery.log )
+    bivio_service_exports+=(
+        SIREPO_CELERY_TASKS_CELERYD_CONCURRENCY=4
+        SIREPO_PKCLI_SRW_SLAVE_PROCESSES=8
+    )
+}

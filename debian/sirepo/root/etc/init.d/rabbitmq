@@ -1,0 +1,14 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: rabbitmq
+# Required-Start: $docker $remote_fs $network
+# Required-Stop: $docker $remote_fs $network
+# Default-Start: 2 3 4 5
+# Default-Stop:  0 1 6
+# Short-Description: AMQP service provided by RabbitMQ
+### END INIT INFO
+
+bivio_service_name=rabbitmq
+
+. /etc/init.d/bivio-service.functions

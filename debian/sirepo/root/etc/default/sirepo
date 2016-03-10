@@ -1,0 +1,31 @@
+#!/bin/bash
+bivio_service_image=radiasoft/sirepo
+
+sirepo_common_vars() {
+    if [[ $rabbitmq_host = rabbitmq ]]; then
+        bivio_service_links+=( $rabbitmq_host )
+    fi
+    bivio_service_volumes+=( $sirepo_db_dir )
+    bivio_service_exports+=(
+        SIREPO_CELERY_TASKS_BROKER_URL=amqp://guest@$rabbitmq_host//
+        PYTHONUNBUFFERED=1
+        RPN_DEFNS=/dev/null
+    )
+}
+
+bivio_service_set_vars() {
+    sirepo_common_vars
+    bivio_service_exec_cmd=( sirepo service uwsgi )
+    bivio_service_ports+=( $sirepo_port )
+    bivio_service_exports+=(
+        SIREPO_PKCLI_SERVICE_DB_DIR=$sirepo_db_dir
+        SIREPO_PKCLI_SERVICE_IP=0.0.0.0
+        SIREPO_PKCLI_SERVICE_PORT=$sirepo_port
+        SIREPO_PKCLI_SERVICE_PROCESSES=1
+        SIREPO_PKCLI_SERVICE_RUN_DIR=$bivio_service_guest_dir
+        SIREPO_PKCLI_SERVICE_THREADS=10
+        SIREPO_SERVER_JOB_QUEUE=Celery
+        SIREPO_SERVER_BEAKER_SESSION_KEY=sirepo_$bivio_service_channel
+        SIREPO_SERVER_BEAKER_SESSION_SECRET=$sirepo_beaker_secret
+    )
+}

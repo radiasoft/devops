@@ -1,0 +1,26 @@
+#!/bin/bash
+# Shares the same image as sirepo service
+. "$(dirname "${BASH_SOURCE[0]}")"/sirepo
+
+bivio_service_set_vars() {
+    bivio_service_exec_cmd=( /usr/lib/rabbitmq/bin/rabbitmq-server )
+    bivio_service_ports+=( 5672 4369 15672 25672 )
+    bivio_service_exports+=(
+        HOME=$bivio_service_guest_dir
+        RABBITMQ_HOME=$bivio_service_guest_dir
+        RABBITMQ_CONFIG_FILE=$bivio_service_guest_dir/rabbitmq
+        RABBITMQ_LOG_BASE=$bivio_service_guest_dir/log
+        RABBITMQ_MNESIA_BASE=$bivio_service_guest_dir/mnesia
+    )
+    local files=( "$bivio_service_host_dir/log" "$bivio_service_host_dir/mnesia" )
+    mkdir -p "${files[@]}"
+    files+=( "$bivio_service_host_dir/rabbitmq.config" )
+    cat <<'EOF' > "${files[@]:(-1)}"
+[{rabbit, [{loopback_users, []}]}].
+EOF
+    files+=( "$bivio_service_host_dir/enabled_plugins" )
+    cat <<'EOF' > "${files[@]:(-1)}"
+[rabbitmq_management].
+EOF
+    chown "$bivio_service_host_user:$bivio_service_host_user" "${files[@]}"
+}
