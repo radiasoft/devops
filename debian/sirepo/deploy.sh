@@ -42,7 +42,7 @@ done
 # Install
 #
 git clone "$repo"
-cd devops/debian
+cd devops/debian/sirepo
 if ! service docker status >& /dev/null; then
     echo Installing Docker
     . ./install-docker.sh
