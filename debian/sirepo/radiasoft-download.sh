@@ -35,7 +35,7 @@ EOF
 sirepo_copy_files() {
     git clone "$sirepo_devops_repo"
     cd devops/debian/sirepo
-    bash ./install-docker.sh
+    . ./install-docker.sh
     cd root
     rsync -r * /
     . /etc/default/bivio-service
