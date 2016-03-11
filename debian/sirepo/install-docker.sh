@@ -86,12 +86,15 @@ sirepo_docker_reinstall() {
     systemctl stop docker || true
     systemctl disable docker || true
     rm -rf /var/lib/docker
-
     x=/etc/systemd/system/docker.service
     perl -p -e '/^ExecStart=/ && s/$/ -s devicemapper/' \
          /lib/systemd/system/docker.service > "$x"
     systemctl enable docker
-    systemctl start docker || journalctl -xn && false
+    if ! systemctl start docker; then
+        journalctl -xn
+        return 1
+    fi
+    return 0
 }
 
 sirepo_docker_main
