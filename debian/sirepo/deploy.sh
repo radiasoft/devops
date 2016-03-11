@@ -43,11 +43,7 @@ done
 #
 git clone "$repo"
 cd devops/debian/sirepo
-if ! service docker status >& /dev/null; then
-    echo Installing Docker
-    . ./install-docker.sh
-fi
-
+. ./install-docker.sh
 cd root
 rsync -r * /
 . /etc/default/bivio-service
