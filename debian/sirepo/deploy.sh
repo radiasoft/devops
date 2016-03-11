@@ -43,7 +43,7 @@ done
 #
 git clone "$repo"
 cd devops/debian/sirepo
-. ./install-docker.sh
+bash ./install-docker.sh
 cd root
 rsync -r * /
 . /etc/default/bivio-service
