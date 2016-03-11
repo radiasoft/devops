@@ -59,6 +59,8 @@ sirepo_docker_install() {
     fi
     apt-get -y purge 'lxc-docker*' || true
     apt-get -y purge 'docker.io*' || true
+    # E: The method driver /usr/lib/apt/methods/https could not be found.
+    apt-get -y install apt-transport-https
     apt-get -y update
     apt-get -y install apt-transport-https ca-certificates || true
     apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D || true
