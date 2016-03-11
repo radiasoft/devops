@@ -3,6 +3,7 @@
 # To run: curl radia.run | sudo bash -s devops/debian/sirepo
 #
 set -e
+: ${sirepo_devops_repo:=https://github.com/radiasoft/devops}
 
 sirepo_assert() {
     if (( $UID != 0 )); then
@@ -32,7 +33,7 @@ EOF
 }
 
 sirepo_copy_files() {
-    git clone "$repo"
+    git clone "$sirepo_devops_repo"
     cd devops/debian/sirepo
     bash ./install-docker.sh
     cd root
