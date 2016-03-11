@@ -45,9 +45,11 @@ sirepo_copy_files() {
 sirepo_done() {
     cd "$prev_dir"
     rm -rf "$TMPDIR"
-    cat <<'EOF'
+    cat <<EOF
 To restart services:
-for s in ${services[*]}; do service \$s update_and_restart; done
+
+for s in ${sirepo_services[*]}; do service \$s update_and_restart; done
+
 EOF
 }
 

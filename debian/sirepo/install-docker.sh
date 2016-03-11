@@ -71,9 +71,8 @@ sirepo_docker_install() {
 }
 
 sirepo_docker_main() {
-    sirepo_docker_check
-    if sirepo_docker_devicemapper; then
-        return 0
+    if sirepo_docker_check; then
+        return
     fi
     sirepo_docker_install
     sirepo_docker_empty
