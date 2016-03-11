@@ -2,10 +2,12 @@
 #
 # Install docker
 #
+set -e
+
 # Assume devicemapper is the only drive we'll use. Not
 # technically correct, but good enough for now.
 if docker info 2>&1 | grep -q -s 'Storage Driver: devicemapper'; then
-    return 0
+    exit 0
 fi
 if docker info 2>&1 | grep -q -s 'Storage Driver: aufs'; then
     cat <<EOF 1>&2
@@ -17,7 +19,7 @@ rm -rf /var/lib/docker
 
 Then restart this program.
 EOF
-    return 1
+    exit 1
 fi
 
 if ! dpkg -s docker-engine >& /dev/null; then
@@ -35,7 +37,7 @@ if ! dpkg -s docker-engine >& /dev/null; then
 fi
 
 if docker info 2>&1 | grep -q -s 'Storage Driver: devicemapper'; then
-    return 0
+    exit 0
 fi
 
 if [[ ! $docker_installed || -f /var/lib/docker ]]; then
@@ -52,7 +54,7 @@ rm -rf /var/lib/docker
 
 Then restart this program.
 EOF
-        return 1
+        exit 1
     fi
 fi
 
@@ -61,13 +63,13 @@ systemctl disable docker || true
 rm -rf /var/lib/docker
 
 x=/etc/systemd/system/docker.service
-perl -p -e '/^ExecStart=/ && s/$/ -s --storage-opt dm.no_warn_on_loop_devices=true/' \
+perl -p -e '/^ExecStart=/ && s/$/ -s devicemapper/' \
      /lib/systemd/system/docker.service > "$x"
 systemctl enable docker
 systemctl start docker || journalctl -xn && false
 
 if docker info 2>&1 | grep -q -s 'Storage Driver: devicemapper'; then
-    return 0
+    exit 0
 fi
 
 cat <<'EOF'
