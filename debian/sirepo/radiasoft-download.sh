@@ -7,12 +7,10 @@ set -e
 
 sirepo_assert() {
     if (( $UID != 0 )); then
-        echo 'Must run as root' 1>&2
-        exit 1
+        install_err 'Must run as root'
     fi
     if ! grep -s -q '^8\.' /etc/debian_version; then
-        echo 'Incorrect debian version (not 8.x) or not Debian' 1>&2
-        exit 1
+        install_err 'Incorrect debian version (not 8.x) or not Debian'
     fi
 }
 
@@ -21,7 +19,7 @@ sirepo_beaker() {
         return
     fi
     # Generate random secret
-    echo "Generating: $sirepo_beaker_secret"
+    install_msg "Generating: $sirepo_beaker_secret"
     python > "$sirepo_beaker_secret" <<'EOF'
 import random, string, sys
 y = string.digits + string.letters + string.punctuation
@@ -33,7 +31,7 @@ EOF
 }
 
 sirepo_copy_files() {
-    git clone "$sirepo_devops_repo"
+    git clone -q "$sirepo_devops_repo"
     cd devops/debian/sirepo
     . ./install-docker.sh
     cd root
@@ -43,9 +41,7 @@ sirepo_copy_files() {
 }
 
 sirepo_done() {
-    cd "$prev_dir"
-    rm -rf "$TMPDIR"
-    cat <<EOF
+    install_msg <<EOF
 To restart services:
 
 for s in ${sirepo_services[*]}; do service \$s update_and_restart; done
@@ -55,7 +51,7 @@ EOF
 
 sirepo_main() {
     sirepo_assert
-    sirepo_tmp
+    install_tmp_dir
     sirepo_prerequisites
     sirepo_copy_files
     sirepo_permissions
@@ -87,7 +83,7 @@ sirepo_permissions() {
 
 sirepo_prerequisites() {
     if ! id vagrant >& /dev/null; then
-        echo Adding user vagrant
+        install_msg 'Adding user vagrant'
         useradd vagrant
     fi
     for f in git nginx; do
@@ -108,14 +104,6 @@ sirepo_start() {
         fi
         service "$s" restart
     done
-}
-
-sirepo_tmp() {
-    prev_dir=$PWD
-    export TMPDIR=/var/tmp/sirepo_config-$$-$RANDOM
-    umask 027
-    mkdir -p "$TMPDIR"
-    cd "$TMPDIR"
 }
 
 sirepo_main
