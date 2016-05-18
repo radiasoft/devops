@@ -2,6 +2,7 @@
 #
 # To run: curl radia.run | sudo bash -s devops/debian/sirepo
 #
+#TODO @robnagler Add channel
 set -e
 : ${sirepo_devops_repo:=https://github.com/radiasoft/devops}
 
@@ -33,9 +34,12 @@ EOF
 sirepo_copy_files() {
     git clone -q "$sirepo_devops_repo"
     cd devops/debian/sirepo
+    git checkout -q "$install_channel"
     . ./install-docker.sh
     cd root
     rsync -r * /
+    #TODO @robnagler install_channel is probably master, but
+    #  we want it to be alpha or beta. If "master" should be "latest" docker
     . /etc/default/bivio-service
     . /etc/default/sirepo
 }
@@ -72,7 +76,8 @@ sirepo_nginx() {
 
 sirepo_permissions() {
     sirepo_services=( rabbitmq celery-sirepo sirepo )
-    local dirs=( $sirepo_db_dir $sirepo_db_dir/beaker )
+    local -a dirs
+    dirs=( $sirepo_db_dir $sirepo_db_dir/beaker )
     for s in "${sirepo_services[@]}"; do
         chmod u+x /etc/init.d/"$s"
         dirs+=( "$bivio_service_base_dir/$s" )

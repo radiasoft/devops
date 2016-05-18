@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+u"""Start iDRAC console via tunneled ports on Mac.
+
+The iDRAC console is a java application that talks VNC (port 5900) to
+the iDRAC. You can't use a normal VNC client unless you by iDRAC
+Enterprise.
+
+If you try to click on ``Launch Console`` in the Life Cycle web client
+via a tunneled connection, it will fail. The console client is launched
+via a JNLP file, which has a bunch of hardwired values, including the
+local IP address for the iDRAC, which is incorrect when tunneling.
+
+The hack herein probably only works with a specific version of the iDRAC.
+As of this writing, the version is 2.15.10.10.
+
+You must setup your ~/.ssh/config as follows::
+
+    Host proxy-host.bivio.biz
+        LocalForward 2001 192.168.1.233:443
+        LocalForward 5901 192.168.1.233:5900
+
+It's the second LocalForward that is needed for the console, but the
+first is needed to access the iDRAC web interface, which provides the
+jar files to JNLP. The ``20xx`` and ``59xx`` are hardwired in this program.
+
+This program assumes you have configured Java to take over the keyboard and
+mouse in (Mac) System Preferences > Security & Privacy > Privacy > Accessibility.
+If you don't, it'll still work, but you won't be able to type in the console.
+Also, if you lose the ability to type, reboot your Mac. This happened to me
+once.a
+
+It also assumes there's a binding to ``*.jnlp`` files to ``Java Web Start.app``.
+It uses "open" to launch javaws, because the Mac doesn't see /usr/bin/javaws
+as the same thing as /usr/bin/java. It's a handy thing binding jnlp anyway.
+
+You must set ``$IDRAC_PASSWORD`` to whatever your root password
+is. We'll use the above example::
+
+    idrac-java-console 1
+
+This will open ports localhost:2001 and localhost:5901 to connect to
+that slot.
+
+:copyright: Copyright (c) 2015-2016 Bivio Software, Inc.  All Rights Reserved.
+:license: http://www.apache.org/licenses/LICENSE-2.0.html
+"""
+from __future__ import absolute_import, division, print_function
+
+import os
+import sys
+
+template = '''<?xml version="1.0" encoding="UTF-8"?>
+<jnlp codebase="https://localhost:20{port}" spec="1.0+">
+<information>
+  <title>Virtual Console Client</title>
+  <vendor>Dell Inc.</vendor>
+   <icon href="https://localhost:20{port}/images/logo.gif" kind="splash"/>
+   <shortcut online="true"/>
+ </information>
+ <application-desc main-class="com.avocent.idrac.kvm.Main">
+   <argument>ip=localhost</argument>
+   <argument>vm=1</argument>
+   <argument>title=root@idrac-{port}</argument>
+   <argument>user=root</argument>
+   <argument>passwd={passwd}</argument>
+   <argument>kmport=59{port}</argument>
+   <argument>vport=59{port}</argument>
+   <argument>apcp=1</argument>
+   <argument>chat=0</argument>
+   <argument>F1=0</argument>
+   <argument>custom=0</argument>
+   <argument>scaling=15</argument>
+   <argument>minwinheight=100</argument>
+   <argument>minwinwidth=100</argument>
+   <argument>videoborder=0</argument>
+   <argument>version=2</argument>
+ </application-desc>
+ <security>
+   <all-permissions/>
+ </security>
+ <resources>
+   <j2se version="1.6+"/>
+   <jar href="https://localhost:20{port}/software/avctKVM.jar" download="eager" main="true" />
+ </resources>
+ <resources os="Windows" arch="x86">
+   <nativelib href="https://localhost:20{port}/software/avctKVMIOWin32.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLWin32.jar" download="eager"/>
+ </resources>
+ <resources os="Windows" arch="amd64">
+   <nativelib href="https://localhost:20{port}/software/avctKVMIOWin64.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLWin64.jar" download="eager"/>
+ </resources>
+ <resources os="Windows" arch="x86_64">
+   <nativelib href="https://localhost:20{port}/software/avctKVMIOWin64.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLWin64.jar" download="eager"/>
+ </resources>
+  <resources os="Linux" arch="x86">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i386">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i586">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i686">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="amd64">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux64.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux64.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="x86_64">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOLinux64.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLLinux64.jar" download="eager"/>
+  </resources>
+  <resources os="Mac OS X" arch="x86_64">
+    <nativelib href="https://localhost:20{port}/software/avctKVMIOMac64.jar" download="eager"/>
+   <nativelib href="https://localhost:20{port}/software/avctVMAPI_DLLMac64.jar" download="eager"/>
+  </resources>
+</jnlp>
+'''
+
+args = {
+    'port': '{:0>2d}'.format(int(sys.argv[1])),
+    'passwd': os.environ['IDRAC_PASSWORD'],
+}
+filename = '/tmp/idrac-java-console.jnlp'
+open(filename, 'w').write(template.format(**args))
+os.execlp('open', 'open', filename)
