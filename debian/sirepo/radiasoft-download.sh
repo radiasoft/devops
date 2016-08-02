@@ -37,10 +37,13 @@ sirepo_copy_files() {
     git checkout -q "$install_channel"
     . ./install-docker.sh
     cd root
+    cp -a ../../../linux-common/bivio-service.functions etc/init.d
     rsync -r * /
     #TODO @robnagler install_channel is probably master, but
     #  we want it to be alpha or beta. If "master" should be "latest" docker
     . /etc/default/bivio-service
+    . /etc/default/rabbitmq
+    bivio_rabbitmq_image=$bivio_service_image
     . /etc/default/sirepo
 }
 
@@ -102,6 +105,7 @@ sirepo_prerequisites() {
 
 sirepo_start() {
     docker pull "$bivio_service_image:$bivio_service_channel"
+    docker pull "$bivio_rabbitmq_image:$bivio_service_channel"
     systemctl daemon-reload
     for s in "${sirepo_services[@]}" nginx; do
         if ! systemctl status "$s" >& /dev/null; then

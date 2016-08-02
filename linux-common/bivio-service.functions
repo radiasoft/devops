@@ -6,32 +6,36 @@
 # docker for all the functions
 #
 
-. /lib/lsb/init-functions
+if [[ -f /lib/lsb/init-functions ]]; then
+    # Ubuntu & Debian
+    . /lib/lsb/init-functions
 
-failure() {
-    log_end_msg 0 || true
-}
+    failure() {
+        log_end_msg 0 || true
+    }
 
-success() {
-    log_end_msg 1 || true
-}
+    success() {
+        log_end_msg 1 || true
+    }
 
+    bivio_sysconfig=/etc/default
+elif [[ -f /etc/rc.d/init.d/functions ]]; then
+    # Red Hat
+    . /etc/rc.d/init.d/functions
+    bivio_sysconfig=/etc/sysconfig
+
+    log_daemon_msg() {
+        echo -n $"$1: "
+    }
+else
+    echo 'Unsupported operating system: need init.d functions'
+    exit 1
+fi
 
 if [[ ! $bivio_service_name ]]; then
     echo "${BASH_SOURCE[1]}: must set \$bivio_service_name"
     exit 1
 fi
-
-. /etc/default/bivio-service
-. "/etc/default/$bivio_service_name"
-
-#TODO: Should this be changed?
-: ${bivio_service_su_wrapper:=/radia-run}
-: ${bivio_service_base_dir:=/var/lib}
-: ${bivio_service_host_dir:=$bivio_service_base_dir/$bivio_service_name}
-: ${bivio_service_guest_user:=vagrant}
-: ${bivio_service_host_user:=$bivio_service_guest_user}
-: ${bivio_service_guest_dir:=/$bivio_service_guest_user}
 
 bivio_service_docker_inspect() {
     local fmt=$1
@@ -43,11 +47,27 @@ bivio_service_docker_args() {
     shift
     local x
     for x in "$@"; do
-        if ! [[ $flag = '-e' || $x =~ : ]]; then
+        if ! [[ $flag =~ -e|--volumes-from || $x =~ : ]]; then
             x="$x:$x"
         fi
         bivio_service_docker_cmd+=( $flag $x )
     done
+}
+
+bivio_service_cmd() {
+    if [[ ! $bivio_service_su_wrapper || $bivio_service_su_wrapper == 0 ]]; then
+        bivio_service_docker_cmd+=( $@ )
+        return
+    fi
+    local cmd=(
+        $bivio_service_su_wrapper
+        $(id -u "$bivio_service_guest_user")
+        $(id -g "$bivio_service_guest_user")
+        $@
+    )
+    bivio_service_docker_cmd+=(
+        bash -c "${cmd[*]}"
+    )
 }
 
 bivio_service_config() {
@@ -58,6 +78,7 @@ bivio_service_config() {
     bivio_service_volumes=(
         "$bivio_service_host_dir:$bivio_service_guest_dir"
     )
+    bivio_service_volumes_from=()
     bivio_service_ports=()
     bivio_service_links=()
     # Docker containers inherit docker's very high ulimits
@@ -77,7 +98,9 @@ bivio_service_config() {
     bivio_service_docker_args -p "${bivio_service_ports[@]}"
     bivio_service_docker_args --link "${bivio_service_links[@]}"
     bivio_service_docker_args -v "${bivio_service_volumes[@]}"
+    bivio_service_docker_args --volumes-from "${bivio_service_volumes_from[@]}"
     bivio_service_docker_args -e "${bivio_service_exports[@]}"
+    bivio_service_docker_cmd+=( $bivio_service_image:$bivio_service_channel )
 }
 
 bivio_service_script() {
@@ -128,14 +151,12 @@ bivio_service_start_failure() {
 }
 
 exec_bash() {
-    #TODO: Share with bivio_service_script (below)
-    local cmd=(
-        ${bivio_service_su_wrapper}
-        $(id -u "$bivio_service_guest_user")
-        $(id -g "$bivio_service_guest_user")
-        /bin/bash --login
+    bivio_service_docker_cmd=(
+        docker exec -it
     )
-    docker exec -it "$bivio_service_name" bash -c "${cmd[*]}"
+    bivio_service_docker_cmd+=( $bivio_service_name )
+    bivio_service_cmd /bin/bash --login
+    "${bivio_service_docker_cmd[@]}"
 }
 
 reload() {
@@ -149,28 +170,19 @@ restart() {
 
 start() {
     bivio_service_host_init_log="$bivio_service_host_dir/init.log"
-    cat /dev/null > "$bivio_service_host_init_log"
+    rm -f "$bivio_service_host_init_log"
+    touch "$bivio_service_host_init_log"
     chown "$bivio_service_host_user:$bivio_service_host_user" "$bivio_service_host_init_log"
-
     trap bivio_service_start_failure EXIT
     set -e
-    log_daemon_msg "Starting $bivio_service_name" "$bivio_service_name" || true
+    log_daemon_msg $"Starting $bivio_service_name" "$bivio_service_name" || true
     if status &> /dev/null; then
         bivio_service_start_failure $"$bivio_service_name is running..."
     fi
     docker rm -f "$bivio_service_name" &>/dev/null || true
     bivio_service_config
-    local su_cmd=(
-        ${bivio_service_su_wrapper}
-        $(id -u "$bivio_service_guest_user")
-        $(id -g "$bivio_service_guest_user")
-        $(bivio_service_script)
-    )
-    bivio_service_docker_cmd+=(
-        "$bivio_service_image:$bivio_service_channel"
-        bash -c "${su_cmd[*]}"
-    )
-    echo "Start: ${bivio_service_docker_cmd[*]}" >> "$bivio_service_host_init_log"
+    bivio_service_cmd $(bivio_service_script)
+    echo "${bivio_service_docker_cmd[*]}" >> "$bivio_service_host_init_log"
     # Ignore container id output
     "${bivio_service_docker_cmd[@]}" > /dev/null
     # Simple attempt to catch startup errors
@@ -229,6 +241,17 @@ update_and_restart() {
     docker pull "$bivio_service_image:$bivio_service_channel"
     restart
 }
+
+. "$bivio_sysconfig/bivio-service"
+. "$bivio_sysconfig/$bivio_service_name"
+
+#TODO: Should this be changed?
+: ${bivio_service_su_wrapper:=/radia-run}
+: ${bivio_service_base_dir:=/var/lib}
+: ${bivio_service_host_dir:=$bivio_service_base_dir/$bivio_service_name}
+: ${bivio_service_guest_user:=vagrant}
+: ${bivio_service_host_user:=$bivio_service_guest_user}
+: ${bivio_service_guest_dir:=/$bivio_service_guest_user}
 
 case "$1" in
     start|status|stop|restart|reload|exec_bash|update_and_restart)
