@@ -1,8 +1,9 @@
 #!/bin/bash
-# Shares the same image as sirepo service
-. "$(dirname "${BASH_SOURCE[0]}")"/sirepo
+bivio_service_image=radiasoft/rabbitmq
+bivio_service_su_wrapper=0
 
 bivio_service_set_vars() {
+    bivio_service_docker_cmd+=( --user=$bivio_service_guest_user )
     bivio_service_exec_cmd=( /usr/lib/rabbitmq/bin/rabbitmq-server )
     bivio_service_ports+=( 5672 4369 15672 25672 )
     bivio_service_exports+=(
