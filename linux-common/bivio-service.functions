@@ -74,6 +74,7 @@ bivio_service_config() {
     bivio_service_exports=(
         "BIVIO_SERVICE_DIR=$bivio_service_guest_dir"
         "BIVIO_SERVICE_CHANNEL=$bivio_service_channel"
+        "PYKERN_PKCONFIG_CHANNEL=$bivio_service_channel"
     )
     bivio_service_volumes=(
         "$bivio_service_host_dir:$bivio_service_guest_dir"
