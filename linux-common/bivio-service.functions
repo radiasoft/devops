@@ -82,6 +82,7 @@ bivio_service_config() {
     bivio_service_volumes_from=()
     bivio_service_ports=()
     bivio_service_links=()
+    bivio_service_hostname=$bivio_service_name
     # Docker containers inherit docker's very high ulimits
     # Python tries to close all files with a subprocess so need to lower them
     # to something more reasonable (not millions) and doesn't cause issues
@@ -92,8 +93,7 @@ bivio_service_config() {
         -d
         --ulimit nofile=4096:4096
         --ulimit nproc=4096:15758
-	--name "$bivio_service_name"
-        --hostname "$bivio_service_name"
+        --name "$bivio_service_name"
     )
     bivio_service_set_vars
     bivio_service_docker_args -p "${bivio_service_ports[@]}"
@@ -101,7 +101,10 @@ bivio_service_config() {
     bivio_service_docker_args -v "${bivio_service_volumes[@]}"
     bivio_service_docker_args --volumes-from "${bivio_service_volumes_from[@]}"
     bivio_service_docker_args -e "${bivio_service_exports[@]}"
-    bivio_service_docker_cmd+=( $bivio_service_image:$bivio_service_channel )
+    bivio_service_docker_cmd+=(
+        --hostname $bivio_service_hostname
+        $bivio_service_image:$bivio_service_channel
+    )
 }
 
 bivio_service_script() {
