@@ -176,7 +176,7 @@ start() {
     bivio_service_host_init_log="$bivio_service_host_dir/$bivio_service_base_init_log"
     if [[ -f "$bivio_service_host_init_log" ]]; then
         mv -f "$bivio_service_host_init_log" \
-           "$bivio_service_dir/$(date +%Y%m%d%H%M%S)-$bivio_service_base_init_log"
+           "$bivio_service_host_dir/$(date +%Y%m%d%H%M%S)-$bivio_service_base_init_log"
     fi
     touch "$bivio_service_host_init_log"
     chown "$bivio_service_host_user:$bivio_service_host_user" \
