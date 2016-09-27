@@ -120,8 +120,8 @@ EOF
         for v in "${bivio_service_exports[@]}"; do
             echo "export '$v'"
         done
-        echo 'echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) '"${bivio_service_exec_cmd[@]}"'" >> init.log'
-        echo 'env >> init.log'
+        echo 'echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) '"${bivio_service_exec_cmd[@]}"'" >>' "$bivio_service_base_init_log"
+        echo "env >> $bivio_service_base_init_log"
         if [[ $(type -t bivio_service_script_pre_exec) ]]; then
             bivio_service_script_pre_exec
         fi
@@ -129,7 +129,7 @@ EOF
         for v in "${bivio_service_exec_cmd[@]}"; do
             x="$x'$v' "
         done
-        echo "$x>> init.log 2>&1"
+        echo "$x>> $bivio_service_base_init_log 2>&1"
     ) > "$f"
     chmod 750 "$f"
     chgrp "$bivio_service_host_user" "$f"
@@ -144,7 +144,7 @@ bivio_service_start_failure() {
     if [[ -f $bivio_service_host_init_log ]]; then
         echo
         echo $"*** $bivio_service_host_init_log *** "
-        cat "$bivio_service_host_init_log" || true
+        tail -50 "$bivio_service_host_init_log" || true
     fi
     echo
     echo $"*** docker logs $bivio_service_name ***"
@@ -173,10 +173,14 @@ restart() {
 }
 
 start() {
-    bivio_service_host_init_log="$bivio_service_host_dir/init.log"
-    rm -f "$bivio_service_host_init_log"
+    bivio_service_host_init_log="$bivio_service_host_dir/$bivio_service_base_init_log"
+    if [[ -f "$bivio_service_host_init_log" ]]; then
+        mv -f "$bivio_service_host_init_log" \
+           "$bivio_service_dir/$(date +%Y%m%d%H%M%S)-$bivio_service_base_init_log"
+    fi
     touch "$bivio_service_host_init_log"
-    chown "$bivio_service_host_user:$bivio_service_host_user" "$bivio_service_host_init_log"
+    chown "$bivio_service_host_user:$bivio_service_host_user" \
+          "$bivio_service_host_init_log"
     trap bivio_service_start_failure EXIT
     set -e
     log_daemon_msg $"Starting $bivio_service_name" "$bivio_service_name" || true
@@ -252,6 +256,7 @@ update_and_restart() {
 #TODO: Should this be changed?
 : ${bivio_service_su_wrapper:=/radia-run}
 : ${bivio_service_base_dir:=/var/lib}
+: ${bivio_service_base_init_log:=init.log}
 : ${bivio_service_host_dir:=$bivio_service_base_dir/$bivio_service_name}
 : ${bivio_service_guest_user:=vagrant}
 : ${bivio_service_host_user:=$bivio_service_guest_user}
