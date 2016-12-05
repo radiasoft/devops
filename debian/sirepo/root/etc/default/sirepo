@@ -1,6 +1,11 @@
 #!/bin/bash
 bivio_service_image=radiasoft/sirepo
 
+f=$(dirname "${BASH_SOURCE[0]}")/sirepo-local
+if [[ -r $f ]]; then
+    . $f
+fi
+
 sirepo_common_vars() {
     if [[ $rabbitmq_host = rabbitmq ]]; then
         bivio_service_links+=( $rabbitmq_host )
@@ -27,5 +32,8 @@ bivio_service_set_vars() {
         SIREPO_SERVER_JOB_QUEUE=Celery
         SIREPO_SERVER_BEAKER_SESSION_KEY=sirepo_$bivio_service_channel
         SIREPO_SERVER_BEAKER_SESSION_SECRET=$sirepo_beaker_secret
+        SIREPO_OAUTH_GITHUB_KEY=$sirepo_oauth_github_key
+        SIREPO_OAUTH_GITHUB_SECRET=$sirepo_oauth_github_secret
+        SIREPO_SERVER_OAUTH_LOGIN=$sirepo_server_oauth_login
     )
 }
