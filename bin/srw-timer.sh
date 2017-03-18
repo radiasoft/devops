@@ -1,5 +1,5 @@
 #!/bin/bash
-: ${particles_per_core:=5}
+: ${particles_per_worker:=5}
 : ${example_num:=10}
 : ${example_py:=SRWLIB_Example$example_num.py}
 t() {
@@ -8,7 +8,7 @@ t() {
     if (( $w == 0 )); then
         w=1
     fi
-    p=$(( $w * $particles_per_core ))
+    p=$(( $w * $particles_per_worker ))
     export p
     perl -pi -e 's/^(nMacroElec =)\s*\d+/$1 $ENV{p}/' "$example_py"
     local op=()
