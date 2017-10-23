@@ -50,6 +50,10 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
+filename = '/tmp/idrac-java-console.jnlp'
+
+# perl -p -e 's{:443}{:2001}g; s{=5900}{=5901};' viewer.jnlp > /tmp/idrac-java-console.jnlp && open /tmp/idrac-java-console.jnlp
+
 template = '''<?xml version="1.0" encoding="UTF-8"?>
 <jnlp codebase="https://localhost:20{port}" spec="1.0+">
 <information>
@@ -130,6 +134,5 @@ args = {
     'port': '{:0>2d}'.format(int(sys.argv[1])),
     'passwd': os.environ['IDRAC_PASSWORD'],
 }
-filename = '/tmp/idrac-java-console.jnlp'
 open(filename, 'w').write(template.format(**args))
 os.execlp('open', 'open', filename)
