@@ -42,6 +42,9 @@ is. We'll use the above example::
 This will open ports localhost:2001 and localhost:5901 to connect to
 that slot.
 
+https://localhost:2000/cgi-bin/webcgi/login
+https://localhost:2001/login.html
+
 :copyright: Copyright (c) 2015-2016 Bivio Software, Inc.  All Rights Reserved.
 :license: http://www.apache.org/licenses/LICENSE-2.0.html
 """
@@ -51,8 +54,6 @@ import os
 import sys
 
 filename = '/tmp/idrac-java-console.jnlp'
-
-# perl -p -e 's{:443}{:2001}g; s{=5900}{=5901};' viewer.jnlp > /tmp/idrac-java-console.jnlp && open /tmp/idrac-java-console.jnlp
 
 template = '''<?xml version="1.0" encoding="UTF-8"?>
 <jnlp codebase="https://localhost:20{port}" spec="1.0+">
@@ -134,5 +135,7 @@ args = {
     'port': '{:0>2d}'.format(int(sys.argv[1])),
     'passwd': os.environ['IDRAC_PASSWORD'],
 }
+print('perl -p -e "s/:443/:20{port}/g;s/=5900/=59{port}/" "$(ls -t viewer*jnlp|head -1)" > v.jnlp && open v.jnlp'.format(**args))
+sys.stdout.flush()
 open(filename, 'w').write(template.format(**args))
 os.execlp('open', 'open', filename)
