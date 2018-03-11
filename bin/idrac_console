@@ -1,0 +1,43 @@
+#!/bin/bash
+set -oue pipefail
+
+idrac_console_main() {
+    if [[ ! ${1:-x} =~ ^(bdu|fnl)([0-9]+)$ ]]; then
+        echo usage: idrac_console site-num-server
+        return 1
+    fi
+    local site=${BASH_REMATCH[1]}
+    local i=${BASH_REMATCH[2]}
+    local v=$HOME/tmp/v.jnlp
+    local viewer=$(ls -t ~/{Desktop,Downloads}/viewer*jnlp 2>/dev/null | head -1)
+    case $site in
+        fnl)
+            rm -f "$v"
+            local https=$(( 2000 + $i ))
+            if [[ ! -s $viewer ]]; then
+                echo "Launch console from https://localhost:$https/index.html"
+                return 1
+            fi
+            local vnc=$(( 5900 + $i ))
+            if ! perl -p -e "s/:443/:$https/g;s/=5900/=$vnc/g" "$viewer" > "$v"; then
+                echo replacement failed.
+                return 1
+            fi
+            ;;
+        bdu)
+            if [[ ! -s $viewer ]]; then
+                echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/index.html"
+                return 1
+            fi
+            cat "$viewer" > "$v"
+            ;;
+        *)
+            echo 'should not get here'
+            return 1
+            ;;
+    esac
+    rm -f "$viewer"
+    open "$v"
+}
+
+idrac_console_main "$@"
