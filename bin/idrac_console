@@ -15,7 +15,7 @@ idrac_console_main() {
             rm -f "$v"
             local https=$(( 3000 + $i ))
             if [[ ! -s $viewer ]]; then
-                echo "Launch console from https://localhost:$https/index.html"
+                echo "Launch console from https://localhost:$https/start.html"
                 return 1
             fi
             local vnc=$(( 5900 + $i ))
@@ -26,7 +26,7 @@ idrac_console_main() {
             ;;
         bdu)
             if [[ ! -s $viewer ]]; then
-                echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/index.html"
+                echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/start.html"
                 return 1
             fi
             cat "$viewer" > "$v"
