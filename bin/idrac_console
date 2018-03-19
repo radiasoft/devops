@@ -1,6 +1,25 @@
 #!/bin/bash
 set -oue pipefail
 
+idrac_console_tunnel() {
+    local i=$1
+    local v=$2
+    local viewer=$3
+    local https=$4
+    local vnc=$5
+    rm -f "$v"
+    https=$(( $https + $i ))
+    if [[ ! -s $viewer ]]; then
+        echo "Launch console from https://localhost:$https/start.html"
+        return 1
+    fi
+    vnc=$(( $vnc + $i ))
+    if ! perl -p -e "s/:443/:$https/g;s/=5900/=$vnc/g" "$viewer" > "$v"; then
+        echo replacement failed.
+        return 1
+    fi
+}
+
 idrac_console_main() {
     if [[ ! ${1:-x} =~ ^(bdu|fnl)([0-9]+)$ ]]; then
         echo usage: idrac_console site-num-server
@@ -11,25 +30,19 @@ idrac_console_main() {
     local v=$HOME/tmp/v.jnlp
     local viewer=$(ls -t ~/{Desktop,Downloads}/viewer*jnlp 2>/dev/null | head -1)
     case $site in
-        fnl)
-            rm -f "$v"
-            local https=$(( 3000 + $i ))
-            if [[ ! -s $viewer ]]; then
-                echo "Launch console from https://localhost:$https/start.html"
-                return 1
-            fi
-            local vnc=$(( 5900 + $i ))
-            if ! perl -p -e "s/:443/:$https/g;s/=5900/=$vnc/g" "$viewer" > "$v"; then
-                echo replacement failed.
-                return 1
+        bdu)
+            if [[ $(ifconfig) =~ inet.10.2.2 ]]; then
+                if [[ ! -s $viewer ]]; then
+                    echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/start.html"
+                    return 1
+                fi
+                cat "$viewer" > "$v"
+            else
+                idrac_console_tunnel "$i" "$v" "$viewer" 4000 6900
             fi
             ;;
-        bdu)
-            if [[ ! -s $viewer ]]; then
-                echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/start.html"
-                return 1
-            fi
-            cat "$viewer" > "$v"
+        fnl)
+            idrac_console_tunnel "$i" "$v" "$viewer" 3000 5900
             ;;
         *)
             echo 'should not get here'
