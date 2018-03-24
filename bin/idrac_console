@@ -28,7 +28,7 @@ idrac_console_main() {
     local site=${BASH_REMATCH[1]}
     local i=${BASH_REMATCH[2]}
     local v=$HOME/tmp/v.jnlp
-    local viewer=$(ls -t ~/{Desktop,Downloads}/viewer*jnlp 2>/dev/null | head -1)
+    local viewer=$(ls -t ~/{Desktop,Downloads}/{viewer*jnlp,Unconfirmed*crdownload} 2>/dev/null | head -1)
     case $site in
         bdu)
             if [[ $(ifconfig) =~ inet.10.2.2 ]]; then
