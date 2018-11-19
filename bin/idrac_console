@@ -1,55 +1,131 @@
 #!/bin/bash
-set -oue pipefail
+set -euo pipefail
+
+_idrac_console_template='<?xml version="1.0" encoding="UTF-8"?>
+<jnlp codebase="https://localhost:443" spec="1.0+">
+<information>
+  <title>Virtual Console Client</title>
+  <vendor>Dell Inc.</vendor>
+   <icon href="https://localhost:443/images/logo.gif" kind="splash"/>
+   <shortcut online="true"/>
+ </information>
+ <application-desc main-class="com.avocent.idrac.kvm.Main">
+   <argument>ip=localhost</argument>
+   <argument>vm=1</argument>
+   <argument>title=TITLE</argument>
+   <argument>user=root</argument>
+   <argument>passwd=PASSWORD</argument>
+   <argument>kmport=5900</argument>
+   <argument>vport=5900</argument>
+   <argument>apcp=1</argument>
+   <argument>reconnect=2</argument>
+   <argument>chat=0</argument>
+   <argument>F1=0</argument>
+   <argument>custom=0</argument>
+   <argument>scaling=15</argument>
+   <argument>minwinheight=100</argument>
+   <argument>minwinwidth=100</argument>
+   <argument>videoborder=0</argument>
+   <argument>version=2</argument>
+ </application-desc>
+ <security>
+   <all-permissions/>
+ </security>
+ <resources>
+   <j2se version="1.6+"/>
+   <jar href="https://localhost:443/software/avctKVM.jar" download="eager" main="true" />
+ </resources>
+ <resources os="Windows" arch="x86">
+   <nativelib href="https://localhost:443/software/avctKVMIOWin32.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLWin32.jar" download="eager"/>
+ </resources>
+ <resources os="Windows" arch="amd64">
+   <nativelib href="https://localhost:443/software/avctKVMIOWin64.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLWin64.jar" download="eager"/>
+ </resources>
+ <resources os="Windows" arch="x86_64">
+   <nativelib href="https://localhost:443/software/avctKVMIOWin64.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLWin64.jar" download="eager"/>
+ </resources>
+  <resources os="Linux" arch="x86">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i386">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i586">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="i686">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux32.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux32.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="amd64">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux64.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux64.jar" download="eager"/>
+  </resources>
+  <resources os="Linux" arch="x86_64">
+    <nativelib href="https://localhost:443/software/avctKVMIOLinux64.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLLinux64.jar" download="eager"/>
+  </resources>
+  <resources os="Mac OS X" arch="x86_64">
+    <nativelib href="https://localhost:443/software/avctKVMIOMac64.jar" download="eager"/>
+   <nativelib href="https://localhost:443/software/avctVMAPI_DLLMac64.jar" download="eager"/>
+  </resources>
+</jnlp>
+'
 
 idrac_console_tunnel() {
     local i=$1
-    local v=$2
-    local viewer=$3
-    local https=$4
-    local vnc=$5
+    local https=$2
+    local vnc=$3
+    local title=$4
+    local host=${5:-localhost}
+    local v=$HOME/tmp/v.jnlp
+    local pw=$(cat ~/.idrac_console)
     rm -f "$v"
     https=$(( $https + $i ))
-    if [[ ! -s $viewer ]]; then
-        echo "Launch console from https://localhost:$https/start.html"
-        return 1
-    fi
     vnc=$(( $vnc + $i ))
-    if ! perl -p -e "s/:443/:$https/g;s/=5900/=$vnc/g" "$viewer" > "$v"; then
+    if ! perl -p -e "
+        s/:443/:$https/g;
+        s/=5900/=$vnc/g;
+        s/TITLE/$title/g;
+        s/PASSWORD/$pw/g;
+        s/localhost/$host/g;
+        " > "$v" <<< "$_idrac_console_template"; then
         echo replacement failed.
         return 1
     fi
 }
 
 idrac_console_main() {
-    if [[ ! ${1:-x} =~ ^(bdu|fnl)([0-9]+)$ ]]; then
+    if [[ ! ${1:-} =~ ^(bdu|fnl)([0-9]+)$ ]]; then
         echo usage: idrac_console site-num-server
         return 1
     fi
+    local host=$1
     local site=${BASH_REMATCH[1]}
     local i=${BASH_REMATCH[2]}
     local v=$HOME/tmp/v.jnlp
-    local viewer=$(ls -t ~/{Desktop,Downloads}/{viewer*jnlp,Unconfirmed*crdownload} 2>/dev/null | head -1)
     case $site in
         bdu)
             if [[ $(ifconfig) =~ inet.10.2.2 ]]; then
-                if [[ ! -s $viewer ]]; then
-                    echo "Launch console from https://bdu$(( $i + 10 ))s.bivio.biz/start.html"
-                    return 1
-                fi
-                cat "$viewer" > "$v"
+                idrac_console_tunnel 0 443 5900 "$host" "${host}s.bivio.biz"
             else
-                idrac_console_tunnel "$i" "$v" "$viewer" 4000 6900
+                idrac_console_tunnel "$i" 4000 6900 "$host"
             fi
             ;;
         fnl)
-            idrac_console_tunnel "$i" "$v" "$viewer" 3000 5900
+            idrac_console_tunnel "$i"  3000 5900 "$host"
             ;;
         *)
             echo 'should not get here'
             return 1
             ;;
     esac
-    rm -f "$viewer"
     open "$v"
 }
 
