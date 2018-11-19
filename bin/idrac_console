@@ -85,7 +85,10 @@ idrac_console_tunnel() {
     local title=$4
     local host=${5:-localhost}
     local v=$HOME/tmp/v.jnlp
-    local pw=$(cat ~/.idrac_console)
+    local pw=$(cat ~/.idrac_console 2>/dev/null|| true)
+    while [[ ! $pw ]]; do
+        read -r -p 'Password: ' pw
+    done
     rm -f "$v"
     https=$(( $https + $i ))
     vnc=$(( $vnc + $i ))
